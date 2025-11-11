@@ -85,9 +85,14 @@ class AnalystAgent(Agent):
         bullets = [
             f"- Cleaned dataset: {n} rows ({removed} removed), {df.shape[1]} columns; missing values handled ({miss_before} → {miss_after}).",
             f"- Numeric columns: {', '.join(num_cols)}.",
-            f"- Visualization plan: histograms={plan['hists']}; "
-            + (f"pairs={plan['pairs']}; " if plan['pairs'] else "")
-            + (f"heatmap={'yes' if plan['heatmap'] else 'no'}"),
+            (
+                "- Visualization plan: "
+                + "; ".join(
+                    [f"histograms={plan['hists']}"]
+                    + ([f"pairs={plan['pairs']}"] if plan['pairs'] else [])
+                    + [f"heatmap={'yes' if plan['heatmap'] else 'no'}"]
+            )
+            ),
         ]
         return "\n".join(bullets)
 

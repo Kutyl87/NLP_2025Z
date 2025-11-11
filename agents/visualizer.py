@@ -6,6 +6,8 @@ from .base import Agent
 
 
 class VisualizationAgent(Agent):
+    MIN_COLS_FOR_HEATMAP = 3
+
     def __init__(
         self,
         name: str = "Visualizer",
@@ -44,7 +46,7 @@ class VisualizationAgent(Agent):
         return out
 
     def _plot_corr_heatmap(self, df: pd.DataFrame, num_cols: List[str]) -> str | None:
-        if len(num_cols) < 3:
+        if len(num_cols) < self.MIN_COLS_FOR_HEATMAP:
             return None
         corr = df[num_cols].corr()
         self._ensure_out()

@@ -9,7 +9,7 @@ from .state import GraphState
 
 
 class Orchestrator:
-
+    MAX_RERUNS=1
     def __init__(
         self,
         analyst: AnalystAgent | None = None,
@@ -66,7 +66,7 @@ class Orchestrator:
         )
         decision_norm = self._normalize_decision(res)
         rerun_count = int(state.get("rerun_count", 0))
-        do_rerun = decision_norm == "RERUN" and rerun_count < 1
+        do_rerun = decision_norm == "RERUN" and rerun_count < self.MAX_RERUNS
         return {
             **res,
             "route_decision": decision_norm,

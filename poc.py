@@ -5,22 +5,24 @@ from utils.utils import ensure_dirs
 if __name__ == "__main__":
     ensure_dirs()
 
-    orch = Orchestrator()  # default agents
+    orch = Orchestrator()
 
     print("\n=== ASCII diagram ===")
     orch.print_ascii()
     orch.save_graph_png("pipeline_graph.png")
-    print("Zapisano diagram do: pipeline_graph.png")
+    print("Diagram saved to: pipeline_graph.png")
 
     print("\n=== RUN ===")
     result = orch.run(
         input_text=(
-            "The WUT Formula Student team built a new active front-wing system "
-            "to improve downforce and cornering stability at low speeds."
+            "Analyze the dataset containing physicochemical properties of red wine samples. "
+            "Perform data cleaning, exploratory analysis, and identify key variables influencing wine quality. "
+            "Prepare visualizations to show correlations between alcohol, acidity, and quality, "
+            "and generate a summary report with conclusions."
         )
     )
 
-    print("\n=== WYNIK KOŃCOWY ===")
+    print("\n=== FINAL RESULT ===")
     for k, v in result.items():
         print(f"{k.upper()}:\n{v}\n")
 
