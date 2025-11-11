@@ -9,7 +9,8 @@ from .state import GraphState
 
 
 class Orchestrator:
-    MAX_RERUNS=1
+    MAX_RERUNS = 1
+
     def __init__(
         self,
         analyst: AnalystAgent | None = None,
@@ -47,14 +48,19 @@ class Orchestrator:
             critic_decision=None,
             critic_notes=None,
         )
-        return {"report_path": res["report_path"], "report_markdown": res.get("report_markdown", "")}
+        return {
+            "report_path": res["report_path"],
+            "report_markdown": res.get("report_markdown", ""),
+        }
 
     def _normalize_decision(self, res: dict) -> str:
         if "critic_llm_decision" in res:
             return str(res["critic_llm_decision"]).upper()
         if "critic_decision" in res:
             m = str(res["critic_decision"]).lower()
-            return {"accept": "ACCEPT", "revise": "RERUN", "fail": "REJECT"}.get(m, "AMBIGUOUS")
+            return {"accept": "ACCEPT", "revise": "RERUN", "fail": "REJECT"}.get(
+                m, "AMBIGUOUS"
+            )
         return "AMBIGUOUS"
 
     def _node_critic(self, state: GraphState) -> GraphState:
@@ -80,10 +86,14 @@ class Orchestrator:
             overview="Auto-generated report from multi-agent pipeline.",
             analysis=state.get("analysis", ""),
             plots=state.get("plots", []),
-            critic_decision=state.get("critic_llm_decision") or state.get("critic_decision"),
+            critic_decision=state.get("critic_llm_decision")
+            or state.get("critic_decision"),
             critic_notes=state.get("critic_notes") or state.get("critic_llm_raw"),
         )
-        return {"report_path": res["report_path"], "report_markdown": res.get("report_markdown", "")}
+        return {
+            "report_path": res["report_path"],
+            "report_markdown": res.get("report_markdown", ""),
+        }
 
     def _route_after_critic(self, state: GraphState) -> str:
         return "analyst" if state.get("do_rerun") else "report_final"
@@ -99,7 +109,11 @@ class Orchestrator:
         wf.add_edge("analyst", "visualizer")
         wf.add_edge("visualizer", "report_draft")
         wf.add_edge("report_draft", "critic")
-        wf.add_conditional_edges("critic", self._route_after_critic, {"analyst": "analyst", "report_final": "report_final"})
+        wf.add_conditional_edges(
+            "critic",
+            self._route_after_critic,
+            {"analyst": "analyst", "report_final": "report_final"},
+        )
         wf.add_edge("report_final", END)
         return wf.compile()
 

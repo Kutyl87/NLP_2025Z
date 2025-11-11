@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from .base import Agent
 
+
 class AnalystAgent(Agent):
     def __init__(
         self,
@@ -49,7 +50,9 @@ class AnalystAgent(Agent):
             else:
                 if df[col].isna().any():
                     mode = df[col].mode()
-                    df[col] = df[col].fillna(mode.iloc[0] if not mode.empty else "unknown")
+                    df[col] = df[col].fillna(
+                        mode.iloc[0] if not mode.empty else "unknown"
+                    )
         return df
 
     def _viz_plan(self, df: pd.DataFrame) -> Dict[str, Any]:
@@ -89,9 +92,9 @@ class AnalystAgent(Agent):
                 "- Visualization plan: "
                 + "; ".join(
                     [f"histograms={plan['hists']}"]
-                    + ([f"pairs={plan['pairs']}"] if plan['pairs'] else [])
+                    + ([f"pairs={plan['pairs']}"] if plan["pairs"] else [])
                     + [f"heatmap={'yes' if plan['heatmap'] else 'no'}"]
-            )
+                )
             ),
         ]
         return "\n".join(bullets)

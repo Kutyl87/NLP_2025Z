@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TypedDict, Any, List
 
+
 class GraphState(TypedDict, total=False):
     input: str
 

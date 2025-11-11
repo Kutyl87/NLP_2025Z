@@ -5,6 +5,7 @@ from typing import Any, Dict
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from .base import Agent
 
+
 class ReportAgent(Agent):
     def __init__(
         self,
@@ -12,7 +13,7 @@ class ReportAgent(Agent):
         templates_dir: str = "templates",
         template_name: str = "report.md.j2",
         out_dir: str = "data/output",
-        out_name: str = "report.md"
+        out_name: str = "report.md",
     ) -> None:
         super().__init__(name)
         self.templates_dir = templates_dir
@@ -32,7 +33,9 @@ class ReportAgent(Agent):
         payload = {
             "title": kwargs.get("title", "Data Analysis Report"),
             "generated_at": datetime.now().isoformat(timespec="seconds"),
-            "overview": kwargs.get("overview", "This report summarizes the analysis and visualizations."),
+            "overview": kwargs.get(
+                "overview", "This report summarizes the analysis and visualizations."
+            ),
             "analysis": kwargs.get("analysis", "(no analysis)"),
             "plots": kwargs.get("plots", []),
             "critic_decision": kwargs.get("critic_decision"),

@@ -67,7 +67,9 @@ class VisualizationAgent(Agent):
         viz_plan: Dict[str, Any] = kwargs["viz_plan"]
 
         if not os.path.isfile(data_path):
-            raise FileNotFoundError(f"Visualizer expected cleaned file at '{data_path}'")
+            raise FileNotFoundError(
+                f"Visualizer expected cleaned file at '{data_path}'"
+            )
 
         df = pd.read_csv(data_path)
         num_cols = df.select_dtypes(include=["number"]).columns.tolist()

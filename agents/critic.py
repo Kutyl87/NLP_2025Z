@@ -29,7 +29,9 @@ class CriticAgent(Agent):
         return cls._pipe
 
     # -------- helpers --------
-    def _read_report(self, report_path: Optional[str], report_markdown: Optional[str]) -> str:
+    def _read_report(
+        self, report_path: Optional[str], report_markdown: Optional[str]
+    ) -> str:
         if report_markdown and report_markdown.strip():
             return report_markdown
         if not report_path:
