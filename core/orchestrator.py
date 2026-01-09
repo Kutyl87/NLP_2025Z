@@ -122,8 +122,6 @@ class Orchestrator(ABC):
 
 
 class Sequential(Orchestrator):
-    MAX_RERUNS = 1
-
     def __init__(
         self,
         analyst: AnalystAgent | None = None,
@@ -155,8 +153,6 @@ class Sequential(Orchestrator):
 
 
 class Parallel(Orchestrator):
-    MAX_RERUNS = 1
-
     def __init__(
         self,
         analyst: AnalystAgent | None = None,

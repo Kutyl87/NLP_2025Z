@@ -7,6 +7,7 @@ if __name__ == "__main__":
     ensure_dirs()
 
     orch = orchestrator.Sequential()
+    # orch = orchestrator.Parallel()
 
     print("\n=== ASCII diagram ===")
     orch.print_ascii()
