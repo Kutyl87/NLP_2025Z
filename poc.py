@@ -1,13 +1,15 @@
 from __future__ import annotations
-# from core.orchestrator import Orchestrator
 import core.orchestrator as orchestrator
 from utils.utils import ensure_dirs
+import time
+
 
 if __name__ == "__main__":
     ensure_dirs()
 
-    orch = orchestrator.Sequential()
-    # orch = orchestrator.Parallel()
+    start_time = time.time()
+    # orch = orchestrator.Sequential()
+    orch = orchestrator.Parallel()
 
     print("\n=== ASCII diagram ===")
     orch.print_ascii()
@@ -30,3 +32,6 @@ if __name__ == "__main__":
 
     if "report_path" in result:
         print(f"Report saved to: {result['report_path']}")
+
+    elapsed_time = time.time() - start_time
+    print(f"Process completed in {elapsed_time:.2f} seconds")
