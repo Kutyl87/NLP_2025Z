@@ -1,11 +1,12 @@
 from __future__ import annotations
-from core.orchestrator import Orchestrator
+# from core.orchestrator import Orchestrator
+import core.orchestrator as orchestrator
 from utils.utils import ensure_dirs
 
 if __name__ == "__main__":
     ensure_dirs()
 
-    orch = Orchestrator()
+    orch = orchestrator.Sequential()
 
     print("\n=== ASCII diagram ===")
     orch.print_ascii()
