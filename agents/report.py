@@ -1,9 +1,11 @@
 from __future__ import annotations
 import os
+from utils import utils
 from datetime import datetime
 from typing import Any, Dict
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from .base import Agent
+
 
 
 class ReportAgent(Agent):
@@ -19,7 +21,7 @@ class ReportAgent(Agent):
         self.templates_dir = templates_dir
         self.template_name = template_name
         self.out_dir = out_dir
-        self.out_name = out_name
+        self.out_name = utils.add_timestamp_suffix(filename=out_name)
         self._env = Environment(
             loader=FileSystemLoader(self.templates_dir),
             autoescape=select_autoescape(enabled_extensions=(".html", ".xml")),
