@@ -8,11 +8,10 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 
-# 1. Importujemy klasę bazową
 from .base import Agent
 
 
-class ReportAgent(Agent):  # 2. Dziedziczymy po Agent
+class ReportAgent(Agent):
     def __init__(
             self,
             name: str = "Gemini-Reporter",
@@ -72,7 +71,7 @@ class ReportAgent(Agent):  # 2. Dziedziczymy po Agent
            - **Selection Limit**: Create MAXIMUM 3-5 sections (one plot per section). Choose only the most impactful plots.
            - **Connect dots**: Explain trends/anomalies visible in the specific image selected for that section.
         
-        3. **Final Synthesis & Recommendations (NEW)**:
+        3. **Final Synthesis & Recommendations**:
            - Write a strong **Conclusion** paragraph.
            - Synthesize findings from the plots and raw analysis.
            - Provide concrete recommendations based on data.

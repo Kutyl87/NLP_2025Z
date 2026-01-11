@@ -55,7 +55,7 @@ class Orchestrator:
 
     def _node_report_draft(self, state: GraphState) -> GraphState:
         previous_notes = state.get("critic_notes")
-        previous_decision = state.get("critic_decision")  # lub critic_llm_decision
+        previous_decision = state.get("critic_decision")
         print(f"--- [Orchestrator] Drafting Report (Has feedback: {bool(previous_notes)}) ---")
         res = self.reporter.run(
             title="Measurement Data Report",
@@ -141,7 +141,7 @@ class Orchestrator:
             "critic",
             self._route_after_critic,
             {
-                "report_draft": "report_draft",  # <--- Pętla zamyka się tutaj
+                "report_draft": "report_draft",
                 "report_final": "report_final"
             },
         )

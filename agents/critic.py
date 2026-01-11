@@ -24,7 +24,6 @@ class CriticAgent(Agent):
             temperature=0.0
         )
 
-    # -------- helpers --------
     def _read_report(
             self, report_path: Optional[str], report_markdown: Optional[str]
     ) -> str:

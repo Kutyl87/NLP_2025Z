@@ -44,7 +44,7 @@ class AnalystAgent(Agent):
         df.drop_duplicates(inplace=True)
         df.dropna(axis=1, how="all", inplace=True)
         for col in df.columns:
-            if df[col].dtype.kind in "ifc":  # numeric
+            if df[col].dtype.kind in "ifc":
                 if df[col].isna().any():
                     df[col] = df[col].fillna(df[col].median())
             else:
@@ -99,7 +99,6 @@ class AnalystAgent(Agent):
         ]
         return "\n".join(bullets)
 
-    # Main
     def run(self, **kwargs: Any) -> Dict[str, Any]:
         data_path = kwargs.get("data_path", self.input_path)
         os.makedirs(self.out_dir, exist_ok=True)
