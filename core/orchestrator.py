@@ -9,15 +9,15 @@ from .state import GraphState
 
 
 class Orchestrator:
-    MAX_RERUNS = 1
+    MAX_RERUNS = 2
 
     def __init__(
-        self,
-        analyst: AnalystAgent | None = None,
-        visualizer: VisualizationAgent | None = None,
-        critic: CriticAgent | None = None,
-        reporter: ReportAgent | None = None,
-        data_path: str = "data/input/winequality-red.csv",
+            self,
+            analyst: AnalystAgent | None = None,
+            visualizer: VisualizationAgent | None = None,
+            critic: CriticAgent | None = None,
+            reporter: ReportAgent | None = None,
+            data_path: str = "data/input/winequality-red.csv",
     ) -> None:
         self.analyst = analyst or AnalystAgent(input_path=data_path)
         self.visualizer = visualizer or VisualizationAgent()
@@ -25,10 +25,24 @@ class Orchestrator:
         self.reporter = reporter or ReportAgent()
         self._app = self._build()
 
-    # Node handlers
     def _node_analyst(self, state: GraphState) -> GraphState:
+        current_input = state["input"]
+        feedback = state.get("critic_notes")
+        rerun_count = state.get("rerun_count", 0)
+        if rerun_count > 0 and feedback:
+            print(f"--- [Orchestrator] Restarting Analysis with Feedback (Attempt {rerun_count}) ---")
+            refined_input = (
+                f"{current_input}\n\n"
+                f"IMPORTANT: Previous attempt was rejected. "
+                f"Reviewer feedback: {feedback}. "
+                f"Please adjust the analysis code to address this."
+            )
+            return self.analyst.run(
+                input=refined_input,
+                data_path=state.get("data_path", self.analyst.input_path),
+            )
         return self.analyst.run(
-            input=state["input"],
+            input=current_input,
             data_path=state.get("data_path", self.analyst.input_path),
         )
 
@@ -40,13 +54,16 @@ class Orchestrator:
         return {"plots": res["plots"], "plots_desc": res.get("plots_desc", [])}
 
     def _node_report_draft(self, state: GraphState) -> GraphState:
+        previous_notes = state.get("critic_notes")
+        previous_decision = state.get("critic_decision")  # lub critic_llm_decision
+        print(f"--- [Orchestrator] Drafting Report (Has feedback: {bool(previous_notes)}) ---")
         res = self.reporter.run(
             title="Measurement Data Report",
             overview="Auto-generated report from multi-agent pipeline.",
             analysis=state.get("analysis", ""),
             plots=state.get("plots", []),
-            critic_decision=None,
-            critic_notes=None,
+            critic_decision=previous_decision,
+            critic_notes=previous_notes,
         )
         return {
             "report_path": res["report_path"],
@@ -54,13 +71,12 @@ class Orchestrator:
         }
 
     def _normalize_decision(self, res: dict) -> str:
-        if "critic_llm_decision" in res:
-            return str(res["critic_llm_decision"]).upper()
-        if "critic_decision" in res:
-            m = str(res["critic_decision"]).lower()
-            return {"accept": "ACCEPT", "revise": "RERUN", "fail": "REJECT"}.get(
-                m, "AMBIGUOUS"
-            )
+        raw_decision = res.get("critic_llm_decision") or res.get("critic_decision", "")
+        d = str(raw_decision).upper().strip()
+        if "ACCEPT" in d: return "ACCEPT"
+        if "RERUN" in d or "REGENERATE" in d: return "RERUN"
+        if "REJECT" in d: return "REJECT"
+        if "AMBIGUOUS" in d: return "AMBIGUOUS"
         return "AMBIGUOUS"
 
     def _node_critic(self, state: GraphState) -> GraphState:
@@ -72,23 +88,33 @@ class Orchestrator:
         )
         decision_norm = self._normalize_decision(res)
         rerun_count = int(state.get("rerun_count", 0))
-        do_rerun = decision_norm == "RERUN" and rerun_count < self.MAX_RERUNS
+        notes = res.get("critic_llm_feedback") or res.get("critic_llm_raw") or "No details."
+        needs_correction = decision_norm in ["RERUN", "REJECT", "AMBIGUOUS"]
+        do_rerun = needs_correction and (rerun_count < self.MAX_RERUNS)
+        print(f"--- [Orchestrator] Critic Decision: {decision_norm} (Raw: {res.get('critic_llm_decision')}) ---")
         return {
             **res,
             "route_decision": decision_norm,
             "do_rerun": do_rerun,
             "rerun_count": rerun_count + 1 if do_rerun else rerun_count,
+            "critic_notes": notes,
+            "critic_decision": decision_norm
         }
 
     def _node_report_final(self, state: GraphState) -> GraphState:
+        decision = state.get("critic_decision")
+        if not decision:
+            decision = state.get("critic_llm_decision", "ACCEPT")
+        notes = state.get("critic_notes")
+        print(f"--- [Orchestrator] Finalizing Report with Status: {decision} ---")
         res = self.reporter.run(
-            title="Measurement Data Report",
-            overview="Auto-generated report from multi-agent pipeline.",
+            title="Measurement Data Report - FINAL",
+            overview="Final verified version.",
             analysis=state.get("analysis", ""),
             plots=state.get("plots", []),
-            critic_decision=state.get("critic_llm_decision")
-            or state.get("critic_decision"),
-            critic_notes=state.get("critic_notes") or state.get("critic_llm_raw"),
+            critic_decision=decision,
+            critic_notes=notes,
+            out_name="report_final.md"
         )
         return {
             "report_path": res["report_path"],
@@ -96,7 +122,9 @@ class Orchestrator:
         }
 
     def _route_after_critic(self, state: GraphState) -> str:
-        return "analyst" if state.get("do_rerun") else "report_final"
+        if state.get("do_rerun"):
+            return "report_draft"
+        return "report_final"
 
     def _build(self):
         wf = StateGraph(GraphState)
@@ -112,7 +140,10 @@ class Orchestrator:
         wf.add_conditional_edges(
             "critic",
             self._route_after_critic,
-            {"analyst": "analyst", "report_final": "report_final"},
+            {
+                "report_draft": "report_draft",  # <--- Pętla zamyka się tutaj
+                "report_final": "report_final"
+            },
         )
         wf.add_edge("report_final", END)
         return wf.compile()

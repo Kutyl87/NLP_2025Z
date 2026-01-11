@@ -1,6 +1,8 @@
 from __future__ import annotations
 from core.orchestrator import Orchestrator
 from utils.utils import ensure_dirs
+from dotenv import load_dotenv
+load_dotenv()
 
 if __name__ == "__main__":
     ensure_dirs()

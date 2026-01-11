@@ -1,41 +1,37 @@
-from __future__ import annotations
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 import os
 import re
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage
 from .base import Agent
 
 
 class CriticAgent(Agent):
     LABELS = ("ACCEPT", "REJECT", "RERUN", "AMBIGUOUS")
-    _pipe = None
 
     def __init__(
-        self,
-        name: str = "LLM-Critic",
-        model_id: str = "google/flan-t5-small",
-        max_report_chars: int = 4000,
+            self,
+            name: str = "Gemini-Critic",
+            model_name: str = "gemini-2.5-flash",
+            max_report_chars: int = 30000,
     ) -> None:
         super().__init__(name)
-        self.model_id = model_id
+        self.name = name
         self.max_report_chars = max_report_chars
-
-    @classmethod
-    def _get_pipe(cls, model_id: str):
-        if cls._pipe is None:
-            tok = AutoTokenizer.from_pretrained(model_id)
-            mod = AutoModelForSeq2SeqLM.from_pretrained(model_id)
-            cls._pipe = pipeline("text2text-generation", model=mod, tokenizer=tok)
-        return cls._pipe
+        self.llm = ChatGoogleGenerativeAI(
+            model=model_name,
+            max_retries=2,
+            temperature=0.0
+        )
 
     # -------- helpers --------
     def _read_report(
-        self, report_path: Optional[str], report_markdown: Optional[str]
+            self, report_path: Optional[str], report_markdown: Optional[str]
     ) -> str:
         if report_markdown and report_markdown.strip():
             return report_markdown
         if not report_path:
-            raise ValueError("LLM Critic requires 'report_path' or 'report_markdown'.")
+            raise ValueError("Critic requires 'report_path' or 'report_markdown'.")
         if not os.path.isfile(report_path):
             raise FileNotFoundError(f"Report file not found: {report_path}")
         with open(report_path, "r", encoding="utf-8") as f:
@@ -45,54 +41,62 @@ class CriticAgent(Agent):
         md_short = md[: self.max_report_chars]
         return (
             "You are a strict quality reviewer of analytical reports.\n"
-            "Read the following Markdown report and answer with ONE WORD ONLY from this set:\n"
-            "ACCEPT, REJECT, RERUN, AMBIGUOUS\n\n"
-            "Guidelines:\n"
-            "- ACCEPT: structure is complete and content is coherent.\n"
-            "- REJECT: report is clearly broken (missing major sections or images referenced but missing).\n"
-            "- RERUN: report seems mostly fine but results/plots likely need to be regenerated or verified.\n"
+            "Read the following Markdown report and provide a decision along with constructive feedback.\n\n"
+            "POSSIBLE DECISIONS:\n"
+            "- ACCEPT: structure is complete, content is coherent, formatting is correct.\n"
+            "- REJECT: report is broken, missing sections, missing images, or logically inconsistent.\n"
+            "- RERUN: report looks okay but specific data/plots seem wrong and need regeneration.\n"
             "- AMBIGUOUS: cannot determine from the provided text.\n\n"
-            "Return ONLY the label (no punctuation, no extra text).\n\n"
-            "Report:\n"
+            "OUTPUT FORMAT:\n"
+            "You must strictly follow this format:\n"
+            "DECISION: [One word from the list above]\n"
+            "FEEDBACK: [Short explanation of why you made this decision. If REJECT, list specifically what is missing.]\n\n"
+            "Report Content:\n"
             f"{md_short}\n\n"
-            "Answer:"
+            "Your Assessment:"
         )
 
-    def _parse_label(self, text: str) -> str:
-        t = text.strip().upper()
-        first = re.split(r"[^A-Z]+", t, maxsplit=1)[0] if t else ""
-        aliases = {
-            "OK": "ACCEPT",
-            "YES": "ACCEPT",
-            "NO": "REJECT",
-            "REGENERATE": "RERUN",
-            "RE-RUN": "RERUN",
-            "UNCLEAR": "AMBIGUOUS",
-            "UNKNOWN": "AMBIGUOUS",
-        }
-        cand = aliases.get(first, first)
-        return cand if cand in self.LABELS else "AMBIGUOUS"
+    def _parse_response(self, text: str) -> Tuple[str, str]:
+        text = text.strip()
+        decision = "AMBIGUOUS"
+        feedback = text
+        pattern = r"DECISION:\s*([A-Z]+)\s*\n?FEEDBACK:\s*(.*)"
+        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+        if match:
+            raw_decision = match.group(1).upper().strip()
+            feedback_text = match.group(2).strip()
+            clean_decision = re.sub(r"[^A-Z]", "", raw_decision)
+            aliases = {
+                "OK": "ACCEPT", "YES": "ACCEPT", "NO": "REJECT",
+                "REGENERATE": "RERUN", "RE-RUN": "RERUN"
+            }
+            if clean_decision in self.LABELS:
+                decision = clean_decision
+            elif clean_decision in aliases:
+                decision = aliases[clean_decision]
+            feedback = feedback_text
+        else:
+            first_line = text.split('\n')[0].upper()
+            for label in self.LABELS:
+                if label in first_line:
+                    decision = label
+                    feedback = text.replace(label, "", 1).strip()
+                    break
 
-    # -------- main --------
+        return decision, feedback
+
     def run(self, **kwargs: Any) -> Dict[str, Any]:
         report_path = kwargs.get("report_path")
         report_markdown = kwargs.get("report_markdown")
 
         md = self._read_report(report_path, report_markdown)
-        prompt = self._build_prompt(md)
-
-        pipe = self._get_pipe(self.model_id)
-        out = pipe(
-            prompt,
-            max_new_tokens=8,
-            temperature=0.0,
-            num_beams=4,
-            no_repeat_ngram_size=3,
-        )
-        raw = out[0]["generated_text"]
-        decision = self._parse_label(raw)
-
+        prompt_content = self._build_prompt(md)
+        messages = [HumanMessage(content=prompt_content)]
+        response = self.llm.invoke(messages)
+        raw_content = response.content
+        decision, feedback = self._parse_response(raw_content)
         return {
             "critic_llm_decision": decision,
-            "critic_llm_raw": raw,
+            "critic_llm_feedback": feedback,
+            "critic_llm_raw": raw_content,
         }
