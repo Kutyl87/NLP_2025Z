@@ -265,7 +265,6 @@ body {
     cursor: not-allowed;
 }
 
-/* Spinner */
 .spinner {
     display: inline-block;
 }
@@ -285,7 +284,6 @@ body {
     }
 }
 
-/* Results Card */
 .result-card {
     text-align: center;
 }
@@ -340,12 +338,15 @@ body {
     gap: 15px;
     flex-wrap: wrap;
     justify-content: center;
+    align-items: center;
     margin: 20px 0;
 }
 
 .download-btn {
     display: inline-block;
     padding: 16px 32px;
+    min-width: 180px;
+    text-align: center;
     background: linear-gradient(135deg, var(--accent-orange) 0%, #fb923c 100%);
     color: white;
     text-decoration: none;
@@ -353,7 +354,12 @@ body {
     font-weight: 600;
     font-size: 1.1rem;
     transition: all 0.3s ease;
-    box-shadow: 0 5px 20px rgba(249, 115, 22, 0.3);
+    box-shadow: 0 10px 30px rgba(42, 204, 146, 0.4);
+}
+
+.download-btn:hover {
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
 }
 
 .download-btn-md {
@@ -361,9 +367,24 @@ body {
     box-shadow: 0 5px 20px rgba(59, 130, 246, 0.3);
 }
 
+.download-btn-md:hover {
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
+}
+
+.download-btn-html {
+    background: linear-gradient(135deg, var(--accent-violet) 0%, var(--accent-violet-light) 100%);
+    box-shadow: 0 5px 20px rgba(139, 92, 246, 0.3);
+}
+
+.download-btn-html:hover {
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
+}
+
 .download-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(249, 115, 22, 0.4);
+    box-shadow: 0 10px 30px rgba(42, 204, 146, 0.4);
 }
 
 .return-btn {
@@ -383,7 +404,6 @@ body {
     transform: translateY(-2px);
 }
 
-/* Error Message */
 .error-message {
     position: fixed;
     top: 20px;
@@ -409,7 +429,6 @@ body {
     }
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
     .container {
         padding: 10px;

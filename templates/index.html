@@ -64,7 +64,7 @@
                 <h2 class="result-title" id="resultTitle">Work is done!</h2>
                 <p class="result-message" id="resultMessage"></p>
                 <div class="download-buttons" id="downloadButtons">
-                    <a href="#" id="downloadPdfLink" class="download-btn" style="display: none;">Download PDF</a>
+                    <a href="#" id="downloadHtmlLink" class="download-btn download-btn-html" style="display: none;">Download HTML</a>
                     <a href="#" id="downloadMdLink" class="download-btn download-btn-md" style="display: none;">Download Markdown</a>
                 </div>
                 <button class="return-btn" id="returnBtn">Return to Upload</button>
@@ -86,7 +86,7 @@
         const mainCard = document.getElementById('mainCard');
         const resultCard = document.getElementById('resultCard');
         const errorMessage = document.getElementById('errorMessage');
-        const downloadPdfLink = document.getElementById('downloadPdfLink');
+        const downloadHtmlLink = document.getElementById('downloadHtmlLink');
         const downloadMdLink = document.getElementById('downloadMdLink');
         const returnBtn = document.getElementById('returnBtn');
 
@@ -200,12 +200,12 @@
                     // Show results
                     document.getElementById('resultMessage').textContent = data.message;
 
-                    // Show PDF download button if available
-                    if (data.report_pdf_filename) {
-                        downloadPdfLink.href = `/download/${data.report_pdf_filename}`;
-                        downloadPdfLink.style.display = 'inline-block';
+                    // Show HTML download button if available
+                    if (data.report_html_filename) {
+                        downloadHtmlLink.href = `/download/${data.report_html_filename}`;
+                        downloadHtmlLink.style.display = 'inline-block';
                     } else {
-                        downloadPdfLink.style.display = 'none';
+                        downloadHtmlLink.style.display = 'none';
                     }
 
                     // Show Markdown download button if available
