@@ -113,3 +113,7 @@ websockets==15.0.1
 xxhash==3.6.0
 zipp==3.23.0
 zstandard==0.25.0
+Flask==3.0.0
+Werkzeug==3.0.1
+markdown==3.5.1
+weasyprint==61.2

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NLP Pipeline - Data Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="card" id="mainCard">
+            <h1 class="title">Data Analysis Pipeline</h1>
+            <p class="subtitle">Upload your CSV file and provide a prompt to generate an analysis report</p>
+
+            <form id="uploadForm" enctype="multipart/form-data">
+                <!-- File Upload Area -->
+                <div class="upload-section">
+                    <label class="upload-label">Upload CSV File</label>
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-content">
+                            <svg class="upload-icon" id="uploadIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <svg class="check-icon" id="checkIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="display: none;">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <p class="drop-zone-text" id="dropZoneText">Drag and drop your CSV file here</p>
+                            <p class="drop-zone-text-secondary" id="dropZoneTextSecondary">or click to browse</p>
+                            <p class="file-info" id="fileInfo" style="display: none;"></p>
+                        </div>
+                        <input type="file" id="fileInput" name="file" accept=".csv" required>
+                    </div>
+                </div>
+
+                <!-- Prompt Input -->
+                <div class="input-section">
+                    <label for="promptInput" class="input-label">Analysis Prompt</label>
+                    <textarea
+                        id="promptInput"
+                        name="prompt"
+                        class="prompt-input"
+                        placeholder="Enter your analysis prompt here... (e.g., Analyze the dataset and identify key patterns...)"
+                        required
+                        rows="5"
+                    ></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span id="submitText">Process Analysis</span>
+                    <div class="spinner" id="spinner" style="display: none;">
+                        <div class="spinner-circle"></div>
+                    </div>
+                </button>
+            </form>
+        </div>
+
+        <!-- Results Card (hidden initially) -->
+        <div class="card result-card" id="resultCard" style="display: none;">
+            <div class="result-content">
+                <div class="success-icon">✓</div>
+                <h2 class="result-title" id="resultTitle">Work is done!</h2>
+                <p class="result-message" id="resultMessage"></p>
+                <div class="download-buttons" id="downloadButtons">
+                    <a href="#" id="downloadPdfLink" class="download-btn" style="display: none;">Download PDF</a>
+                    <a href="#" id="downloadMdLink" class="download-btn download-btn-md" style="display: none;">Download Markdown</a>
+                </div>
+                <button class="return-btn" id="returnBtn">Return to Upload</button>
+            </div>
+        </div>
+
+        <!-- Error Message (hidden initially) -->
+        <div class="error-message" id="errorMessage" style="display: none;"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const spinner = document.getElementById('spinner');
+        const mainCard = document.getElementById('mainCard');
+        const resultCard = document.getElementById('resultCard');
+        const errorMessage = document.getElementById('errorMessage');
+        const downloadPdfLink = document.getElementById('downloadPdfLink');
+        const downloadMdLink = document.getElementById('downloadMdLink');
+        const returnBtn = document.getElementById('returnBtn');
+
+        // Drag and drop functionality
+        dropZone.addEventListener('click', (e) => {
+            // Only trigger if clicking directly on dropZone, not on fileInput
+            if (e.target === dropZone || e.target.closest('.drop-zone-content')) {
+                fileInput.click();
+            }
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                // Create a DataTransfer object to properly set the file input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(files[0]);
+                fileInput.files = dataTransfer.files;
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        // Prevent fileInput from being clicked directly (only through dropZone)
+        fileInput.addEventListener('click', (e) => {
+            // Allow the click to proceed, but we handle it through dropZone
+            e.stopPropagation();
+        });
+
+        function handleFileSelect(file) {
+            // Validate file type
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showError('Please upload a CSV file');
+                fileInput.value = ''; // Clear invalid file
+                return;
+            }
+
+            // Validate file size (50MB)
+            const maxSize = 50 * 1024 * 1024;
+            if (file.size > maxSize) {
+                showError('File size exceeds 50MB limit');
+                fileInput.value = ''; // Clear invalid file
+                return;
+            }
+
+            // The fileInput already has the file selected, so we just need to update the UI
+            // No need to manually set fileInput.files (it's read-only anyway)
+            fileInfo.textContent = `✓ ${file.name} (${formatFileSize(file.size)})`;
+            fileInfo.style.display = 'block';
+            dropZone.classList.add('file-selected');
+
+            // Show check icon and hide upload icon
+            document.getElementById('uploadIcon').style.display = 'none';
+            document.getElementById('checkIcon').style.display = 'block';
+            document.getElementById('dropZoneText').textContent = 'File loaded successfully!';
+            document.getElementById('dropZoneTextSecondary').textContent = 'Click to change file';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Form submission
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(uploadForm);
+            const prompt = formData.get('prompt').trim();
+
+            if (!prompt) {
+                showError('Please enter a prompt');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.style.display = 'none';
+            spinner.style.display = 'block';
+            hideError();
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Show results
+                    document.getElementById('resultMessage').textContent = data.message;
+
+                    // Show PDF download button if available
+                    if (data.report_pdf_filename) {
+                        downloadPdfLink.href = `/download/${data.report_pdf_filename}`;
+                        downloadPdfLink.style.display = 'inline-block';
+                    } else {
+                        downloadPdfLink.style.display = 'none';
+                    }
+
+                    // Show Markdown download button if available
+                    if (data.report_md_filename) {
+                        downloadMdLink.href = `/download/${data.report_md_filename}`;
+                        downloadMdLink.style.display = 'inline-block';
+                    } else {
+                        downloadMdLink.style.display = 'none';
+                    }
+
+                    mainCard.style.display = 'none';
+                    resultCard.style.display = 'block';
+                } else {
+                    showError(data.error || 'Processing failed');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                // Reset loading state
+                submitBtn.disabled = false;
+                submitText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        });
+
+        // Return button
+        returnBtn.addEventListener('click', () => {
+            resultCard.style.display = 'none';
+            mainCard.style.display = 'block';
+            uploadForm.reset();
+            fileInfo.style.display = 'none';
+            dropZone.classList.remove('file-selected');
+            // Reset icons
+            document.getElementById('uploadIcon').style.display = 'block';
+            document.getElementById('checkIcon').style.display = 'none';
+            document.getElementById('dropZoneText').textContent = 'Drag and drop your CSV file here';
+            document.getElementById('dropZoneTextSecondary').textContent = 'or click to browse';
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+
