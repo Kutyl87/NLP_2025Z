@@ -15,14 +15,7 @@ if __name__ == "__main__":
     print("Diagram saved to: pipeline_graph.png")
 
     print("\n=== RUN ===")
-    result = orch.run(
-        input_text=(
-            "Analyze the dataset containing physicochemical properties of red wine samples. "
-            "Perform data cleaning, exploratory analysis, and identify key variables influencing wine quality. "
-            "Prepare visualizations to show correlations between alcohol, acidity, and quality, "
-            "and generate a summary report with conclusions."
-        )
-    )
+    result = orch.run()
 
     print("\n=== FINAL RESULT ===")
     for k, v in result.items():

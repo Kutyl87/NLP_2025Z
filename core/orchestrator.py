@@ -26,23 +26,14 @@ class Orchestrator:
         self._app = self._build()
 
     def _node_analyst(self, state: GraphState) -> GraphState:
-        current_input = state["input"]
         feedback = state.get("critic_notes")
         rerun_count = state.get("rerun_count", 0)
         if rerun_count > 0 and feedback:
             print(f"--- [Orchestrator] Restarting Analysis with Feedback (Attempt {rerun_count}) ---")
-            refined_input = (
-                f"{current_input}\n\n"
-                f"IMPORTANT: Previous attempt was rejected. "
-                f"Reviewer feedback: {feedback}. "
-                f"Please adjust the analysis code to address this."
-            )
             return self.analyst.run(
-                input=refined_input,
                 data_path=state.get("data_path", self.analyst.input_path),
             )
         return self.analyst.run(
-            input=current_input,
             data_path=state.get("data_path", self.analyst.input_path),
         )
 
@@ -152,8 +143,8 @@ class Orchestrator:
     def app(self):
         return self._app
 
-    def run(self, input_text: str, data_path: str | None = None) -> GraphState:
-        initial: GraphState = {"input": input_text, "rerun_count": 0}
+    def run(self, data_path: str | None = None) -> GraphState:
+        initial: GraphState = {"rerun_count": 0}
         initial["data_path"] = data_path or self.analyst.input_path
         return self._app.invoke(initial)
 

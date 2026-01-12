@@ -3,7 +3,6 @@ from typing import TypedDict, Any, List
 
 
 class GraphState(TypedDict, total=False):
-    input: str
 
     # Analyst outputs
     analysis: str
