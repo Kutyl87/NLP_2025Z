@@ -1,6 +1,9 @@
 import os
+
+import matplotlib
 import pandas as pd
 import matplotlib.pyplot as plt
+matplotlib.use('Agg')
 from typing import List, Any, Dict, Optional
 from .base import Agent
 import json
