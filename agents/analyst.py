@@ -44,7 +44,7 @@ class AnalystAgent(Agent):
         df.drop_duplicates(inplace=True)
         df.dropna(axis=1, how="all", inplace=True)
         for col in df.columns:
-            if df[col].dtype.kind in "ifc":  # numeric
+            if df[col].dtype.kind in "ifc":
                 if df[col].isna().any():
                     df[col] = df[col].fillna(df[col].median())
             else:
@@ -99,7 +99,6 @@ class AnalystAgent(Agent):
         ]
         return "\n".join(bullets)
 
-    # Main
     def run(self, **kwargs: Any) -> Dict[str, Any]:
         data_path = kwargs.get("data_path", self.input_path)
         os.makedirs(self.out_dir, exist_ok=True)
@@ -118,3 +117,35 @@ class AnalystAgent(Agent):
             "data_path": cleaned_path,
             "viz_plan": plan,
         }
+
+
+# class AnalystParallelAgent(AnalystAgent):
+#     def __init__(
+#         self,
+#         name: str = "Analyst",
+#         input_path: str = "data/input/winequality-red.csv",
+#         out_dir: str = "data/output",
+#         max_hists: int = 10,
+#         max_pairs: int = 10,
+#         corr_threshold: float = 0.6,
+#     ) -> None:
+#         super().__init__(name, input_path, out_dir, max_hists, max_pairs, corr_threshold)
+
+#     def run(self, **kwargs: Any) -> Dict[str, Any]:
+#         data_path = kwargs.get("data_path", self.input_path)
+#         os.makedirs(self.out_dir, exist_ok=True)
+
+#         df_raw = self._load(data_path)
+#         df = self._clean(df_raw)
+
+#         cleaned_path = os.path.join(self.out_dir, "cleaned.csv")
+#         df.to_csv(cleaned_path, index=False)
+
+#         plan = self._viz_plan(df)
+#         analysis = self._insights_text(df_raw, df, plan)
+
+#         return {
+#             "analysis": analysis,
+#             "data_path": cleaned_path,
+#             "viz_plan": plan,
+#         }
