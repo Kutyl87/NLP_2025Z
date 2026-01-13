@@ -70,7 +70,7 @@ def process():
 
         result = orch.run(data_path=file_path)
 
-        report_md_path = result.get('report_path')
+        report_md_path = report_md_path = result.get('report_path') or result.get('final_report_path')
         if not report_md_path or not os.path.exists(report_md_path):
             return jsonify({'error': 'Report generation failed'}), 500
 
