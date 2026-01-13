@@ -34,17 +34,20 @@
                     </div>
                 </div>
 
-                <!-- Prompt Input -->
                 <div class="input-section">
-                    <label for="promptInput" class="input-label">Analysis Prompt</label>
-                    <textarea
-                        id="promptInput"
-                        name="prompt"
-                        class="prompt-input"
-                        placeholder="Enter your analysis prompt here... (e.g., Analyze the dataset and identify key patterns...)"
-                        required
-                        rows="5"
-                    ></textarea>
+                    <label class="input-label">Select Execution Mode</label>
+
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="execution_mode" value="seq" checked>
+                            <span class="radio-text">Sequential</span>
+                        </label>
+
+                        <label class="radio-option">
+                            <input type="radio" name="execution_mode" value="par">
+                            <span class="radio-text">Parallel</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Submit Button -->
@@ -175,12 +178,6 @@
             e.preventDefault();
 
             const formData = new FormData(uploadForm);
-            const prompt = formData.get('prompt').trim();
-
-            if (!prompt) {
-                showError('Please enter a prompt');
-                return;
-            }
 
             // Show loading state
             submitBtn.disabled = true;
@@ -197,10 +194,8 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // Show results
                     document.getElementById('resultMessage').textContent = data.message;
 
-                    // Show HTML download button if available
                     if (data.report_html_filename) {
                         downloadHtmlLink.href = `/download/${data.report_html_filename}`;
                         downloadHtmlLink.style.display = 'inline-block';
@@ -208,7 +203,6 @@
                         downloadHtmlLink.style.display = 'none';
                     }
 
-                    // Show Markdown download button if available
                     if (data.report_md_filename) {
                         downloadMdLink.href = `/download/${data.report_md_filename}`;
                         downloadMdLink.style.display = 'inline-block';
@@ -224,7 +218,6 @@
             } catch (error) {
                 showError('Network error: ' + error.message);
             } finally {
-                // Reset loading state
                 submitBtn.disabled = false;
                 submitText.style.display = 'block';
                 spinner.style.display = 'none';

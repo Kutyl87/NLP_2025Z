@@ -4,7 +4,13 @@ import os
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, send_file, jsonify
 
-from core.orchestrator import Orchestrator
+from agents.analyst import AnalystAgent
+from agents.assemble import AssemblerAgent
+from agents.critic import CriticAgent, CriticVisAgent, CriticRepAgent
+from agents.report import ReportAgent, ReportParallelAgent
+from agents.visualizer import VisualizationAgent, VisualizationParallelAgent
+from core.orchestrator_parallel import ParallelOrchestrator
+from core.orchestrator_sequential import OrchestratorSequential
 from utils.utils import ensure_dirs, allowed_file
 from utils.app_utils import embed_images_in_markdown, convert_markdown_to_html
 
@@ -33,7 +39,6 @@ def process():
             return jsonify({'error': 'No file provided'}), 400
 
         file = request.files['file']
-        prompt = request.form.get('prompt', '').strip()
 
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
@@ -41,15 +46,29 @@ def process():
         if not allowed_file(file.filename, app.config['ALLOWED_EXTENSIONS']):
             return jsonify({'error': 'Only CSV files are allowed'}), 400
 
-        if not prompt:
-            return jsonify({'error': 'Prompt is required'}), 400
 
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
+        mode = request.form.get('execution_mode', 'seq')
+        if mode == 'seq':
+            orch = OrchestratorSequential(
+                analyst=AnalystAgent(),
+                visualizer=VisualizationAgent(),
+                critic=CriticAgent(),
+                reporter=ReportAgent()
+            )
+        elif mode == 'par':
+            orch = ParallelOrchestrator(
+                analyst=AnalystAgent(),
+                visualizer=VisualizationParallelAgent(),
+                critic_vis=CriticVisAgent(),
+                critic_rep=CriticRepAgent(),
+                reporter=ReportParallelAgent(),
+                assembler=AssemblerAgent()
+            )
 
-        orch = Orchestrator(data_path=file_path)
-        result = orch.run(input_text=prompt, data_path=file_path)
+        result = orch.run(data_path=file_path)
 
         report_md_path = result.get('report_path')
         if not report_md_path or not os.path.exists(report_md_path):
@@ -95,5 +114,5 @@ def download_file(filename: str):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=3000)
 
