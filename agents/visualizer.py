@@ -1,8 +1,13 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Optional
 from .base import Agent
+import json
+from langchain_core.messages import HumanMessage
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 class VisualizationAgent(Agent):
@@ -93,3 +98,152 @@ class VisualizationAgent(Agent):
                 plots.append(path)
 
         return {"plots": plots}
+
+
+class VisualizationParallelAgent(VisualizationAgent):
+    def __init__(
+        self,
+        name: str = "Gemini-Visualizer",
+        out_plt_dir: str = "data/output/plots",
+        templates_dir: str = "templates",
+        template_name: str = "report.md.j2",
+        out_dir: str = "data/output",
+        out_name: str = "report-vis.md",
+        model_name: str = "gemini-2.5-flash",
+        api_key: Optional[str] = None
+    ) -> None:
+        super().__init__(name, out_dir=out_plt_dir)
+
+        self.templates_dir = templates_dir
+        self.template_name = template_name
+
+        self.report_out_dir = out_dir
+        self.out_name = out_name
+
+        if api_key:
+            os.environ["GOOGLE_API_KEY"] = api_key
+
+        self.llm = ChatGoogleGenerativeAI(
+            model=model_name,
+            temperature=0.3,
+        )
+
+        self._env = Environment(
+            loader=FileSystemLoader(self.templates_dir),
+            autoescape=select_autoescape(enabled_extensions=(".html", ".xml")),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+
+    def _curate_content_with_llm(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+        analysis_text = raw_data.get("analysis", "No raw analysis provided.")
+        available_plots = raw_data.get("plots", [])
+        critic_feedback = raw_data.get("critic_notes")
+
+        feedback_context = f"CRITIC FEEDBACK: {critic_feedback}" if critic_feedback else "NO PRIOR FEEDBACK."
+
+        prompt = f"""
+        You are an expert Senior Data Reporter. Your task is to generate a structured markdown report where visual evidence drives the narrative.
+
+        INPUT DATA:
+        1. Raw Analysis: {analysis_text}
+        2. Available Plot Files: {available_plots}
+        3. Context/Feedback: {feedback_context}
+
+        INSTRUCTIONS:
+
+        1. **Executive Overview**:
+           - SKIP. Another agent is doing this.
+
+        2. **Structured Analysis (The Core)**:
+           - Organize the report into **logical sections**.
+           - For each key insight, select **ONE** relevant plot.
+           - **Structure**: The plot comes first, followed by the deep-dive analysis of that specific plot.
+           - **Selection Limit**: Create MAXIMUM 3-5 sections (one plot per section). Choose only the most impactful plots.
+
+        3. **Final Synthesis & Recommendations**:
+           - SKIP. Another agent is doing this.
+
+        4. **Handling Feedback**:
+           - If 'Context' indicates CRITIC FEEDBACK, generate a `change_log`.
+           - Explain how you fixed the issues (e.g., "Reviewer requested X, so I added section Y").
+           - If no feedback, `change_log` is null.
+
+        JSON STRUCTURE:
+        {{
+            "title": "Measurement Data Report",
+            "overview": null,
+            "sections": [
+                {{
+                    "heading": "Subheader for this insight...",
+                    "plot_path": "path/to/selected_plot.png",
+                    "content": "Deep dive analysis specifically describing this plot..."
+                }}
+            ],
+            "conclusion": null,
+            "change_log": "Explanation of fixes or null"
+        }}
+        """
+
+        try:
+            response = self.llm.invoke([HumanMessage(content=prompt)])
+            content = response.content.replace("```json", "").replace("```", "").strip()
+            return json.loads(content)
+
+        except Exception as e:
+            print(f"[{self.name}] LLM Error (fallback): {e}")
+            fallback_plots = raw_data.get("plots", [])[:3]
+            sections = []
+            for p in fallback_plots:
+                sections.append({
+                    "heading": "Analysis (Fallback)",
+                    "plot_path": p,
+                    "content": "Automated description unavailable due to LLM error."
+                })
+
+            return {
+                "title": raw_data.get("title", "Report (Fallback)"),
+                "overview": None,
+                "sections": sections,
+                "change_log": None
+            }
+
+    def run(self, **kwargs: Any) -> Dict[str, Any]:
+        plots = []
+        if "plots" in kwargs and kwargs["plots"]:
+            plots = kwargs["plots"]
+        else:
+            plot_res = super().run(**kwargs)
+            plots = plot_res["plots"]
+
+        print(f"[{self.name}] Generating structured analysis section...")
+        curated_content = self._curate_content_with_llm({**kwargs, "plots": plots})
+
+        c_notes = kwargs.get("critic_notes") or ""
+        used_plots = [s.get("plot_path") for s in curated_content.get("sections", []) if s.get("plot_path")]
+
+        payload = {
+            "title": curated_content.get("title", "Analysis Report"),
+            "generated_at": "",
+            "overview": None,
+            "sections": curated_content.get("sections", []),
+            "conclusion": None,
+            "change_log": curated_content.get("change_log"),
+            "critic_notes": c_notes,
+            "critic_decision": kwargs.get("critic_decision"),
+            "plots": used_plots
+        }
+
+        template = self._env.get_template(self.template_name)
+        md = template.render(**payload)
+
+        os.makedirs(self.report_out_dir, exist_ok=True)
+        out_path = os.path.join(self.report_out_dir, self.out_name)
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(md)
+
+        return {
+            "report_path": out_path,
+            "report_markdown": md,
+            "plots": plots
+        }

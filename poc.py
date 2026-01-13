@@ -1,5 +1,6 @@
 from __future__ import annotations
-from core.orchestrator import Orchestrator
+from core.orchestrator import Orchestrator as OrchSequential
+from core.orchestrator_parallel import Orchestrator as OrchParallel
 from utils.utils import ensure_dirs
 from dotenv import load_dotenv
 load_dotenv()
@@ -7,7 +8,8 @@ load_dotenv()
 if __name__ == "__main__":
     ensure_dirs()
 
-    orch = Orchestrator()
+    # orch = OrchSequential()
+    orch = OrchParallel()
 
     print("\n=== ASCII diagram ===")
     orch.print_ascii()
@@ -15,7 +17,9 @@ if __name__ == "__main__":
     print("Diagram saved to: pipeline_graph.png")
 
     print("\n=== RUN ===")
-    result = orch.run()
+    # result = orch.run()
+    # result = orch.run(data_path="data/input/sales_data.csv")
+    result = orch.run(data_path="data/input/winequality-red.csv")
 
     print("\n=== FINAL RESULT ===")
     for k, v in result.items():
